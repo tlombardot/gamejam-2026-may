@@ -2,9 +2,12 @@ import { Physics, Scene, Math as PhaserMath } from "phaser";
 import { Player } from "../entities/Player";
 
 export class Game extends Scene {
+  isGameStarted: boolean = false;
   camera: Phaser.Cameras.Scene2D.Camera;
   background: Phaser.GameObjects.Image;
   pipes: Phaser.Physics.Arcade.Group;
+  instructions: Phaser.GameObjects.Text;
+  pipeTimer: Phaser.Time.TimerEvent;
   player: Player;
 
   constructor() {
@@ -12,12 +15,19 @@ export class Game extends Scene {
   }
 
   create() {
+    this.physics.pause();
     const { width, height } = this.scale;
     this.pipes = this.physics.add.group();
     this.background = this.add.image(width / 2, height / 2, "sky");
     this.background.setDisplaySize(1920, 1080);
-    this.player = new Player(this, 100, 100);
+    this.player = new Player(this, 100, 400);
     this.input.on("pointerdown", () => {
+      if (!this.isGameStarted) {
+        this.isGameStarted = true;
+        this.instructions.destroy();
+        this.physics.resume();
+        this.pipeTimer.paused = false;
+      }
       this.player.jump();
     });
     this.physics.world.on("worldbounds", (body: Physics.Arcade.Body) => {
@@ -25,11 +35,12 @@ export class Game extends Scene {
         this.gameOver();
       }
     });
-    this.time.addEvent({
+    this.pipeTimer = this.time.addEvent({
       delay: 1500,
       callback: this.spawnPipes,
       callbackScope: this,
       loop: true,
+      paused: true,
     });
     this.physics.add.collider(
       this.player,
@@ -38,12 +49,16 @@ export class Game extends Scene {
       undefined,
       this,
     );
+    this.instructions = this.add
+      .text(width / 2, height / 2, "Clique pour sauter", { fontSize: "40px" })
+      .setOrigin(0.5);
   }
 
   gameOver() {
     this.physics.pause();
     this.player.setTint(0xff0000);
     this.time.delayedCall(1000, () => {
+      this.isGameStarted = false;
       this.scene.restart();
     });
   }
@@ -78,5 +93,12 @@ export class Game extends Scene {
       pipeWidth,
       bottomHeight,
     );
+  }
+  //@ts-ignore
+  update(time: number, delta: number): void {
+    this.pipes.getChildren().forEach((pipe) => {
+      const p = pipe as Phaser.GameObjects.Rectangle;
+      if (p.x < -100) p.destroy();
+    });
   }
 }
