@@ -11,6 +11,6 @@ export class Player extends Physics.Arcade.Sprite {
   }
 
   jump() {
-    this.setVelocityY(-300);
+    this.setVelocityY(-500);
   }
 }
